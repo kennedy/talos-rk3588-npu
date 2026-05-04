@@ -819,6 +819,26 @@ steps:
         echo "BUG55 rev46 patch: OK"
         echo "BUG55 rev46 cache-buster: 2026-05-04-dsb-sy-wc-drain"
 
+        # Bug 55 rev 47: fix out-of-bounds multi-core register writes for RK3588.
+        #
+        # On RK3576, base[0] is a single large ioremap region covering the full
+        # NPU register space; base[0]+0x1004 = core1_base+0x4 and
+        # base[0]+0x3004 = core2_base+0x4 are valid.
+        #
+        # On RK3588, three SEPARATE 4KB ioremap windows exist (DT reg entries at
+        # 0xfdab0000, 0xfdab1000, 0xfdab3000 with a physical gap at 0xfdab2000).
+        # Each base[i] spans exactly one 4KB page.  Writing base[core_index]+0x1004
+        # or base[core_index]+0x3004 from a 4KB window is OUT OF BOUNDS and never
+        # reaches the intended per-core register.  These writes silently miss (or
+        # corrupt adjacent vmalloc mappings), leaving the other cores un-armed and
+        # the NPU never starts executing (tc stays 0 permanently).
+        #
+        # Fix: replace the hardcoded 0x1004/0x3004 REG_WRITE loop with a direct
+        # writel to rknpu_dev->base[j]+0x4 for each j != core_index.
+        python3 -c "import base64,sys; exec(base64.b64decode(b'aW1wb3J0IHN5cwpkID0gb3Blbignc3JjL3JrbnB1X2pvYi5jJykucmVhZCgpCgpvbGQ0NyA9ICgKICAgICdcdGlmIChya25wdV9kZXYtPmNvbmZpZy0+bnVtX2lycXMgPiAxKSB7XG4nCiAgICAnXHRcdGZvciAoaSA9IDA7IGkgPCBya25wdV9kZXYtPmNvbmZpZy0+bnVtX2lycXM7IGkrKykge1xuJwogICAgJ1x0XHRcdGlmIChpID09IGNvcmVfaW5kZXgpIHtcbicKICAgICdcdFx0XHRcdFJFR19XUklURSgoMHhlICsgMHgxMDAwMDAwMCAqIGkpLCAweDEwMDQpO1xuJwogICAgJ1x0XHRcdFx0UkVHX1dSSVRFKCgweGUgKyAweDEwMDAwMDAwICogaSksIDB4MzAwNCk7XG4nCiAgICAnXHRcdFx0fVxuJwogICAgJ1x0XHR9XG4nCikKbmV3NDcgPSAoCiAgICAnXHRpZiAocmtucHVfZGV2LT5jb25maWctPm51bV9pcnFzID4gMSkge1xuJwogICAgJ1x0XHQvKiBCdWcgNTUgcmV2IDQ3OiBPbiBSSzM1NzYsIGJhc2VbMF0gY292ZXJzIHRoZSBmdWxsIHJlZ2lzdGVyIHNwYWNlIHNvXG4nCiAgICAnXHRcdCAqIGJhc2VbMF0rMHgxMDA0ID0gY29yZTFfYmFzZSsweDQgYW5kIGJhc2VbMF0rMHgzMDA0ID0gY29yZTJfYmFzZSsweDQuXG4nCiAgICAnXHRcdCAqIE9uIFJLMzU4OCwgdGhyZWUgU0VQQVJBVEUgNEtCIGlvcmVtYXAgcmVnaW9ucyBleGlzdCAoMHhmZGFiMDAwMCxcbicKICAgICdcdFx0ICogMHhmZGFiMTAwMCwgMHhmZGFiMzAwMCB3aXRoIGEgcGh5c2ljYWwgZ2FwIGF0IDB4ZmRhYjIwMDApLiAgV3JpdGluZ1xuJwogICAgJ1x0XHQgKiBiYXNlW2NvcmVfaW5kZXhdKzB4MTAwNCBvciBiYXNlW2NvcmVfaW5kZXhdKzB4MzAwNCBmcm9tIGEgNEtCLW1hcHBlZFxuJwogICAgJ1x0XHQgKiB3aW5kb3cgaXMgT1VUIE9GIEJPVU5EUyBhbmQgbmV2ZXIgcmVhY2hlcyB0aGUgaW50ZW5kZWQgaGFyZHdhcmUgcmVnaXN0ZXIuXG4nCiAgICAnXHRcdCAqIEZpeDogaXRlcmF0ZSBhbGwgY29yZXMgaiAhPSBjb3JlX2luZGV4IGFuZCB3cml0ZSBkaXJlY3RseSB0b1xuJwogICAgJ1x0XHQgKiBya25wdV9kZXYtPmJhc2Vbal0rMHg0LCBwcmVzZXJ2aW5nIHRoZSBvcmlnaW5hbCBlbmNvZGVkIHZhbHVlLiAqL1xuJwogICAgJ1x0XHR7XG4nCiAgICAnXHRcdFx0aW50IF9yNDdfajtcbicKICAgICdcdFx0XHR1MzIgX3I0N192YWwgPSAodTMyKSgweGUgKyAweDEwMDAwMDAwICogY29yZV9pbmRleCk7XG4nCiAgICAnXHRcdFx0Zm9yIChfcjQ3X2ogPSAwOyBfcjQ3X2ogPCBya25wdV9kZXYtPmNvbmZpZy0+bnVtX2lycXM7IF9yNDdfaisrKSB7XG4nCiAgICAnXHRcdFx0XHRpZiAoX3I0N19qICE9IGNvcmVfaW5kZXgpIHtcbicKICAgICdcdFx0XHRcdFx0d3JpdGVsKF9yNDdfdmFsLCBya25wdV9kZXYtPmJhc2VbX3I0N19qXSArIDB4NCk7XG4nCiAgICAnXHRcdFx0XHRcdExPR19ERVZfSU5GTyhya25wdV9kZXYtPmRldixcbicKICAgICdcdFx0XHRcdFx0XHQiQlVHNTUgcjQ3OiBjaT0lZCAweCV4IC0+IGJhc2VbJWRdKzB4NFxcbiIsXG4nCiAgICAnXHRcdFx0XHRcdFx0Y29yZV9pbmRleCwgX3I0N192YWwsIF9yNDdfaik7XG4nCiAgICAnXHRcdFx0XHR9XG4nCiAgICAnXHRcdFx0fVxuJwogICAgJ1x0XHR9XG4nCikKYXNzZXJ0IG9sZDQ3IGluIGQsICdQQVRDSCBGQUlMRUQ6IG11bHRpLWNvcmUgMHgxMDA0LzB4MzAwNCBibG9jayBub3QgZm91bmQgaW4gcmtucHVfam9iLmMnCmQgPSBkLnJlcGxhY2Uob2xkNDcsIG5ldzQ3LCAxKQpvcGVuKCdzcmMvcmtucHVfam9iLmMnLCAndycpLndyaXRlKGQpCmFzc2VydCAnQlVHNTUgcjQ3OicgaW4gZApzeXMuZXhpdCgwKQo=').decode())"
+        echo "BUG55 rev47 patch: OK"
+        echo "BUG55 rev47 cache-buster: 2026-05-04-fix-oob-multicore-reg-writes"
+
     build:
       - |
         # Diagnostic: confirm Kbuild content visible to the build step.
