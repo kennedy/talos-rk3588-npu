@@ -806,6 +806,23 @@ steps:
         echo "BUG55 rev45 patch: OK"
         echo "BUG55 rev45 cache-buster: 2026-05-03-regcfg-amount-override-0x2000"
 
+        # Bug 55 rev 46: drain user-space WC write buffer before kernel reads kv_addr.
+        #
+        # Root cause (confirmed via dmesg, 2026-05-04):
+        # librknnrt writes task descriptors through a pgprot_writecombine mmap.
+        # WC stores go to the CPU write-combining buffer, NOT directly to DRAM.
+        # No barrier exists between the user-space ioctl() and the kernel reading
+        # task_base[i].regcmd_addr via kv_addr (which is also WC-mapped, reading DRAM
+        # directly).  For tasks written close to the ioctl boundary, DRAM still has
+        # alloc_pages() zeros — regcmd_addr=0, pc_data_addr=0 → NPU DMA reads garbage
+        # → run_task_counter stays 0.
+        # Fix: DSB SY (full outer-shareable barrier) immediately after kv_addr is
+        # loaded.  This drains ALL outstanding WC stores on ALL CPUs to the memory
+        # system before the first kv_addr read, so regcmd_addr is visible in DRAM.
+        python3 -c "import base64,sys; exec(base64.b64decode(b'aW1wb3J0IHN5cwpkID0gb3Blbignc3JjL3JrbnB1X2pvYi5jJykucmVhZCgpCgpvbGQ0NiA9ICgKICAgICdcdHRhc2tfYmFzZSA9IHRhc2tfb2JqLT5rdl9hZGRyO1xuJwogICAgJ1xuJwogICAgJ1x0Zmlyc3RfdGFzayA9ICZ0YXNrX2Jhc2VbdGFza19zdGFydF07XG4nCikKbmV3NDYgPSAoCiAgICAnXHR0YXNrX2Jhc2UgPSB0YXNrX29iai0+a3ZfYWRkcjtcbicKICAgICdcbicKICAgICdcdC8qIEJ1ZyA1NSByZXYgNDY6IGRyYWluIHVzZXItc3BhY2UgV0Mgd3JpdGUgYnVmZmVyIHRvIERSQU0uXG4nCiAgICAnXHQgKiBsaWJya25ucnQgd3JpdGVzIHRhc2sgZGVzY3JpcHRvcnMgdmlhIHBncHJvdF93cml0ZWNvbWJpbmUgbW1hcDtcbicKICAgICdcdCAqIFdDIHN0b3JlcyBieXBhc3MgdGhlIENQVSBjYWNoZXMgYnV0IHNpdCBpbiB0aGUgd3JpdGUtY29tYmluaW5nXG4nCiAgICAnXHQgKiBidWZmZXIgdW50aWwgYSBiYXJyaWVyLiAgV2l0aG91dCB0aGlzLCBEUkFNIG1heSBzdGlsbCBoYXZlIHRoZVxuJwogICAgJ1x0ICogemVyby1pbml0aWFsaXNlZCBhbGxvY19wYWdlKCkgdmFsdWVzIGZvciBmaWVsZHMgbGlrZSByZWdjbWRfYWRkclxuJwogICAgJ1x0ICogKGVzcGVjaWFsbHkgZm9yIHRoZSBsYXN0IGZldyB0YXNrcyB3aG9zZSBsaW5lcyB3ZXJlIG5vdCB5ZXRcbicKICAgICdcdCAqIGV2aWN0ZWQgZnJvbSB0aGUgV0MgYnVmZmVyKS4gIERTQiBTWSBpcyB0aGUgb3V0ZXItc2hhcmVhYmxlXG4nCiAgICAnXHQgKiBmdWxsIGJhcnJpZXI6IGl0IGNvbW1pdHMgQUxMIG91dHN0YW5kaW5nIHN0b3JlcyBvbiBBTEwgQ1BVc1xuJwogICAgJ1x0ICogdG8gdGhlIG1lbW9yeSBzeXN0ZW0gYmVmb3JlIGFueSBzdWJzZXF1ZW50IHJlYWQgcHJvY2VlZHMuXG4nCiAgICAnXHQgKiBUaGlzIG11c3QgYmUgdGhlIGZpcnN0IHRoaW5nIGFmdGVyIGxvYWRpbmcga3ZfYWRkci4gKi9cbicKICAgICdcdGFzbSB2b2xhdGlsZSgiZHNiIHN5IiA6OjogIm1lbW9yeSIpO1xuJwogICAgJ1x0TE9HX0RFVl9JTkZPKHJrbnB1X2Rldi0+ZGV2LFxuJwogICAgJ1x0XHQiQlVHNTUgcjQ2OiBjaT0lZCBkc2Jfc3kgZG9uZSwgcmVhZGluZyB0YXNrX2Jhc2VcXG4iLFxuJwogICAgJ1x0XHRjb3JlX2luZGV4KTtcbicKICAgICdcbicKICAgICdcdGZpcnN0X3Rhc2sgPSAmdGFza19iYXNlW3Rhc2tfc3RhcnRdO1xuJwopCmFzc2VydCBvbGQ0NiBpbiBkLCAiUEFUQ0ggRkFJTEVEOiB0YXNrX2Jhc2U9a3ZfYWRkciBibG9jayBub3QgZm91bmQiCmQgPSBkLnJlcGxhY2Uob2xkNDYsIG5ldzQ2LCAxKQpvcGVuKCJzcmMvcmtucHVfam9iLmMiLCAidyIpLndyaXRlKGQpCmFzc2VydCAiQlVHNTUgcjQ2OiIgaW4gZApzeXMuZXhpdCgwKQo=').decode())"
+        echo "BUG55 rev46 patch: OK"
+        echo "BUG55 rev46 cache-buster: 2026-05-04-dsb-sy-wc-drain"
+
     build:
       - |
         # Diagnostic: confirm Kbuild content visible to the build step.
