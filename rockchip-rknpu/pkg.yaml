@@ -787,6 +787,25 @@ steps:
         echo "BUG55 rev44 patch: OK"
         echo "BUG55 rev44 cache-buster: 2026-05-02-flush-dcache-page-per-page"
 
+        # Bug 55 rev 45: librknnrt 2.3.2 leaves regcfg_amount=0 for all tasks.
+        #
+        # Root cause (confirmed via dmesg memory dump, 2026-05-03):
+        # librknnrt 2.3.2 only writes regcfg_addr (offset 32) in struct rknpu_task;
+        # all other fields including regcfg_amount (offset 24) are left as 0.
+        # With regcfg_amount=0:
+        #   PC_DATA_AMOUNT = (0+4+2-1)/2-1 = 1 → NPU reads only 2 u32 words of
+        #   register config → insufficient to initialise any compute layer.
+        #   DMA task list at PC_DMA_BASE_ADDR has regcfg_amount=0 for all 38 tasks
+        #   → NPU applies 0 register configs per task → never executes → tc=0.
+        # Fix: override all task descriptors in [task_start, task_end] to
+        # regcfg_amount=0x2000 via NC kv_addr write + DSB ISH so DRAM is coherent
+        # before the NPU DMA engine reads the task list.
+        # 0x2000 → PC_DATA_AMOUNT=4097 → ~32 KB from regcmd_addr=0xC49300; safely
+        # within the model weight allocation ending at 0xC75C00.
+        python3 -c "import base64,sys; exec(base64.b64decode(b'aW1wb3J0IHN5cwpkID0gb3Blbignc3JjL3JrbnB1X2pvYi5jJykucmVhZCgpCgojIFJldiA0NTogbGlicmtubnJ0IDIuMy4yIGxlYXZlcyByZWdjZmdfYW1vdW50PTAgZm9yIGFsbCB0YXNrcy4KIyBQQ19EQVRBX0FNT1VOVCA9ICgwKzUpLzItMSA9IDEgLT4gcmVhZHMgb25seSAyIHUzMiB3b3JkcyAoaW5zdWZmaWNpZW50KS4KIyBUaGUgRE1BIHRhc2sgbGlzdCBhdCBQQ19ETUFfQkFTRV9BRERSIGFsc28gaGFzIHJlZ2NmZ19hbW91bnQ9MCBwZXIgZW50cnk6CiMgTlBVIGFwcGxpZXMgMCByZWdpc3RlciBjb25maWdzIHBlciB0YXNrIC0+IG5ldmVyIGV4ZWN1dGVzIC0+IHRjPTAuCiMgT3ZlcnJpZGUgYWxsIFt0YXNrX3N0YXJ0Li50YXNrX2VuZF0gZGVzY3JpcHRvcnMgdG8gcmVnY2ZnX2Ftb3VudD0weDIwMDAKIyB2aWEgTkMga3ZfYWRkciB3cml0ZSArIERTQiBJU0ggc28gTlBVIERNQSBzZWVzIHRoZSB2YWx1ZSBpbiBEUkFNLgpvbGQ0NSA9ICgKICAgICdcdFJFR19XUklURSgoZmlyc3RfdGFzay0+cmVnY2ZnX2Ftb3VudCArIFJLTlBVX1BDX0RBVEFfRVhUUkFfQU1PVU5UICtcbicKICAgICdcdFx0ICAgcGNfZGF0YV9hbW91bnRfc2NhbGUgLSAxKSAvXG4nCiAgICAnXHRcdFx0XHQgIHBjX2RhdGFfYW1vdW50X3NjYWxlIC1cbicKICAgICdcdFx0XHQgIDEsXG4nCiAgICAnXHRcdCAgUktOUFVfT0ZGU0VUX1BDX0RBVEFfQU1PVU5UKTtcbicKKQpuZXc0NSA9ICgKICAgICdcdC8qIEJ1ZyA1NSByZXYgNDU6IGxpYnJrbm5ydCAyLjMuMiB3cml0ZXMgcmVnY2ZnX2Ftb3VudD0wIGZvciBhbGwgdGFza3MuXG4nCiAgICAnXHQgKiBQQ19EQVRBX0FNT1VOVCA9ICgwKzUpLzItMSA9IDEgLT4gcmVhZHMgb25seSAyIHUzMiB3b3JkcyAoaW5zdWZmaWNpZW50KS5cbicKICAgICdcdCAqIERNQSB0YXNrIGxpc3QgYXQgUENfRE1BX0JBU0VfQUREUiBhbHNvIGhhcyByZWdjZmdfYW1vdW50PTAgcGVyIGVudHJ5OlxuJwogICAgJ1x0ICogTlBVIGFwcGxpZXMgMCByZWdpc3RlciBjb25maWdzIHBlciB0YXNrIC0+IG5ldmVyIGV4ZWN1dGVzIC0+IHRjPTAuXG4nCiAgICAnXHQgKiBPdmVycmlkZSBhbGwgW3Rhc2tfc3RhcnQuLnRhc2tfZW5kXSBkZXNjcmlwdG9ycyB0byByZWdjZmdfYW1vdW50PTB4MjAwMFxuJwogICAgJ1x0ICogdmlhIE5DIGt2X2FkZHIgd3JpdGUgKyBEU0IgSVNIIHNvIE5QVSBETUEgc2VlcyB0aGUgdmFsdWUgaW4gRFJBTS5cbicKICAgICdcdCAqIDB4MjAwMCAtPiBQQ19EQVRBX0FNT1VOVD00MDk3IC0+IH4zMiBLQiBmcm9tIHJlZ2NtZF9hZGRyIChzYWZlKS4gKi9cbicKICAgICdcdGlmIChmaXJzdF90YXNrLT5yZWdjZmdfYW1vdW50ID09IDApIHtcbicKICAgICdcdFx0aW50IF9yNDVfaTtcbicKICAgICdcdFx0Zm9yIChfcjQ1X2kgPSB0YXNrX3N0YXJ0OyBfcjQ1X2kgPD0gdGFza19lbmQ7IF9yNDVfaSsrKVxuJwogICAgJ1x0XHRcdHRhc2tfYmFzZVtfcjQ1X2ldLnJlZ2NmZ19hbW91bnQgPSAweDIwMDA7XG4nCiAgICAnXHRcdGFzbSB2b2xhdGlsZSgiZHNiIGlzaCIgOjo6ICJtZW1vcnkiKTtcbicKICAgICdcdFx0TE9HX0RFVl9JTkZPKHJrbnB1X2Rldi0+ZGV2LFxuJwogICAgJ1x0XHRcdCJCVUc1NSByNDU6IGNpPSVkIG92ZXJyb2RlIHJjYT0weDIwMDAgdHM9JWQgdGU9JWRcXG4iLFxuJwogICAgJ1x0XHRcdGNvcmVfaW5kZXgsIHRhc2tfc3RhcnQsIHRhc2tfZW5kKTtcbicKICAgICdcdH1cbicKICAgICdcdFJFR19XUklURSgoZmlyc3RfdGFzay0+cmVnY2ZnX2Ftb3VudCArIFJLTlBVX1BDX0RBVEFfRVhUUkFfQU1PVU5UICtcbicKICAgICdcdFx0ICAgcGNfZGF0YV9hbW91bnRfc2NhbGUgLSAxKSAvXG4nCiAgICAnXHRcdFx0XHQgIHBjX2RhdGFfYW1vdW50X3NjYWxlIC1cbicKICAgICdcdFx0XHQgIDEsXG4nCiAgICAnXHRcdCAgUktOUFVfT0ZGU0VUX1BDX0RBVEFfQU1PVU5UKTtcbicKKQphc3NlcnQgb2xkNDUgaW4gZCwgJ1BBVENIIEZBSUxFRDogUENfREFUQV9BTU9VTlQgUkVHX1dSSVRFIG5vdCBmb3VuZCBpbiBya25wdV9qb2IuYycKZCA9IGQucmVwbGFjZShvbGQ0NSwgbmV3NDUsIDEpCgpvcGVuKCdzcmMvcmtucHVfam9iLmMnLCAndycpLndyaXRlKGQpCmFzc2VydCAnQlVHNTUgcjQ1OicgaW4gZApzeXMuZXhpdCgwKQo=').decode())"
+        echo "BUG55 rev45 patch: OK"
+        echo "BUG55 rev45 cache-buster: 2026-05-03-regcfg-amount-override-0x2000"
+
     build:
       - |
         # Diagnostic: confirm Kbuild content visible to the build step.
