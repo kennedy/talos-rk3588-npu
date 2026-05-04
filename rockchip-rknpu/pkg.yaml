@@ -839,6 +839,28 @@ steps:
         echo "BUG55 rev47 patch: OK"
         echo "BUG55 rev47 cache-buster: 2026-05-04-fix-oob-multicore-reg-writes-v2"
 
+        # Bug 55 rev 48: flush Rev 45's regcfg_amount=0x2000 override to DRAM
+        # via DC CIVAC + DSB SY so the NPU DMA engine sees the updated values.
+        #
+        # Rev 45 overrides task_base[task_start..task_end].regcfg_amount to 0x2000
+        # (because librknnrt 2.3.2 leaves it as 0) and follows with DSB ISH.
+        # DSB ISH only ensures visibility within the inner-shareable CPU cluster.
+        # The NPU DMA engine is connected via the rockchip-iommu which is an
+        # outer-shareable DMA master.  If the kernel's task_base mapping is
+        # write-back cacheable (WB), the dirty cache lines never reach DRAM until
+        # an explicit clean operation.  Without DC CIVAC + DSB SY, the NPU DMA
+        # reads stale regcfg_amount=0 from DRAM → applies 0 register configs per
+        # task → never executes any NPU compute → run_task_counter stays 0.
+        #
+        # Fix: replace DSB ISH with DC CIVAC for each cache line covering the
+        # task_base[task_start..task_end] range (Clean+Invalidate to PoC) followed
+        # by DSB SY (outer-shareable full barrier).  For NC/WC-mapped task_base the
+        # DC CIVAC is a no-op but DSB SY is still needed; for WB-mapped task_base
+        # the DC CIVAC flushes the dirty lines to DRAM before DSB SY.
+        python3 -c "import base64,sys; exec(base64.b64decode(b'aW1wb3J0IHN5cwpkID0gb3Blbignc3JjL3JrbnB1X2pvYi5jJykucmVhZCgpCgpubCA9IGNocig5MikgKyAnbicKCiMgUmV2IDQ4OiBSZXBsYWNlIFJldiA0NSdzIERTQiBJU0ggd2l0aCBEQyBDSVZBQyArIERTQiBTWSB0byBlbnN1cmUgdGhlCiMgb3ZlcnJpZGRlbiByZWdjZmdfYW1vdW50PTB4MjAwMCB2YWx1ZXMgcmVhY2ggRFJBTSBhbmQgYXJlIHZpc2libGUgdG8gdGhlCiMgTlBVIERNQSBlbmdpbmUgKHJvY2tjaGlwLWlvbW11LCBvdXRlci1zaGFyZWFibGUgZG9tYWluKS4KIyBSZXYgNDUgdXNlZCBEU0IgSVNIIHdoaWNoIG9ubHkgY292ZXJzIHRoZSBpbm5lci1zaGFyZWFibGUgQ1BVIGNsdXN0ZXI7CiMgdGhlIHJvY2tjaGlwLWlvbW11IERNQSBtYXN0ZXIgaXMgb3V0c2lkZSB0aGF0IGRvbWFpbiBhbmQgbmVlZHMgRFNCIFNZIChmdWxsCiMgb3V0ZXItc2hhcmVhYmxlKSB0byBzZWUgdGhlIHdyaXRlcy4gIERDIENJVkFDIGNsZWFucyBhbmQgaW52YWxpZGF0ZXMgZWFjaAojIDY0LWJ5dGUgY2FjaGUgbGluZSBjb3ZlcmluZyB0aGUgdGFzayByYW5nZSwgZmx1c2hpbmcgYW55IFdCLWNhY2hlZCBkaXJ0eQojIGRhdGEgdG8gRFJBTTsgRFNCIFNZIHRoZW4gZW5zdXJlcyBhbGwgRE1BIG1hc3RlcnMgb2JzZXJ2ZSB0aGUgdXBkYXRlZCB2YWx1ZXMuCgpvbGQ0OCA9ICgKICAgICdcdFx0YXNtIHZvbGF0aWxlKCJkc2IgaXNoIiA6OjogIm1lbW9yeSIpO1xuJwogICAgJ1x0XHRMT0dfREVWX0lORk8ocmtucHVfZGV2LT5kZXYsXG4nCiAgICAnXHRcdFx0IkJVRzU1IHI0NTogY2k9JWQgb3ZlcnJvZGUgcmNhPTB4MjAwMCB0cz0lZCB0ZT0lZCcgKyBubCArICciLFxuJwogICAgJ1x0XHRcdGNvcmVfaW5kZXgsIHRhc2tfc3RhcnQsIHRhc2tfZW5kKTtcbicKKQoKbmV3NDggPSAoCiAgICAnXHRcdC8qIEJ1ZyA1NSByZXYgNDg6IGZsdXNoIG92ZXJyaWRkZW4gcmVnY2ZnX2Ftb3VudCB0byBEUkFNIHZpYVxuJwogICAgJ1x0XHQgKiBEQyBDSVZBQyAoQ2xlYW4rSW52YWxpZGF0ZSBieSBWQSB0byBQb0MpICsgRFNCIFNZIHNvIHRoZSBOUFVcbicKICAgICdcdFx0ICogRE1BIGVuZ2luZSAocm9ja2NoaXAtaW9tbXUsIG91dGVyLXNoYXJlYWJsZSBkb21haW4pIHJlYWRzIDB4MjAwMC5cbicKICAgICdcdFx0ICogUmV2IDQ1IHVzZWQgRFNCIElTSCB3aGljaCBvbmx5IGNvbW1pdHMgc3RvcmVzIHRvIHRoZSBpbm5lci1zaGFyZWFibGVcbicKICAgICdcdFx0ICogQ1BVIGNsdXN0ZXI7IERDIENJVkFDICsgRFNCIFNZIGV4dGVuZHMgdGhlIGNvbW1pdCB0byBldmVyeSBETUEgbWFzdGVyXG4nCiAgICAnXHRcdCAqIG9uIHRoZSBTb0MgaW50ZXJjb25uZWN0IGluY2x1ZGluZyB0aGUgTlBVIHJvY2tjaGlwLWlvbW11IFRCVS4gKi9cbicKICAgICdcdFx0e1xuJwogICAgJ1x0XHRcdHVuc2lnbmVkIGxvbmcgX3I0OF9zID0gKCh1bnNpZ25lZCBsb25nKSh0YXNrX2Jhc2UgKyB0YXNrX3N0YXJ0KSkgJiB+NjNVTDtcbicKICAgICdcdFx0XHR1bnNpZ25lZCBsb25nIF9yNDhfZSA9ICh1bnNpZ25lZCBsb25nKSh0YXNrX2Jhc2UgKyB0YXNrX2VuZCArIDEpO1xuJwogICAgJ1x0XHRcdHVuc2lnbmVkIGxvbmcgX3I0OF9wO1xuJwogICAgJ1x0XHRcdGZvciAoX3I0OF9wID0gX3I0OF9zOyBfcjQ4X3AgPCBfcjQ4X2U7IF9yNDhfcCArPSA2NClcbicKICAgICdcdFx0XHRcdGFzbSB2b2xhdGlsZSgiZGMgY2l2YWMsICUwIiA6OiAiciIoX3I0OF9wKSA6ICJtZW1vcnkiKTtcbicKICAgICdcdFx0fVxuJwogICAgJ1x0XHRhc20gdm9sYXRpbGUoImRzYiBzeSIgOjo6ICJtZW1vcnkiKTtcbicKICAgICdcdFx0TE9HX0RFVl9JTkZPKHJrbnB1X2Rldi0+ZGV2LFxuJwogICAgJ1x0XHRcdCJCVUc1NSByNDg6IGNpPSVkIHJjYT0weDIwMDAgb3ZlcnJvZGUgdHM9JWQgdGU9JWQgcmNhX3JiPTB4JXgnICsgbmwgKyAnIixcbicKICAgICdcdFx0XHRjb3JlX2luZGV4LCB0YXNrX3N0YXJ0LCB0YXNrX2VuZCxcbicKICAgICdcdFx0XHR0YXNrX2Jhc2VbdGFza19zdGFydF0ucmVnY2ZnX2Ftb3VudCk7XG4nCikKCmFzc2VydCBvbGQ0OCBpbiBkLCAnUEFUQ0ggRkFJTEVEOiBSZXYgNDUgZHNiIGlzaCtMT0cgYmxvY2sgbm90IGZvdW5kIGluIHJrbnB1X2pvYi5jJwpkID0gZC5yZXBsYWNlKG9sZDQ4LCBuZXc0OCwgMSkKb3Blbignc3JjL3JrbnB1X2pvYi5jJywgJ3cnKS53cml0ZShkKQpvayA9ICdCVUc1NSByNDg6JyBpbiBkIGFuZCAnZGMgY2l2YWMnIGluIGQgYW5kICdkc2Igc3knIGluIGQgYW5kICdyY2FfcmInIGluIGQKc3lzLmV4aXQoMCBpZiBvayBlbHNlIDEpCg==').decode())"
+        echo "BUG55 rev48 patch: OK"
+        echo "BUG55 rev48 cache-buster: 2026-05-04-dc-civac-dsb-sy-regcfg-flush"
+
     build:
       - |
         # Diagnostic: confirm Kbuild content visible to the build step.
