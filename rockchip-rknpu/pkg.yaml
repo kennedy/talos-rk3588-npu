@@ -897,6 +897,20 @@ steps:
         echo "BUG55 rev50 patch: OK"
         echo "BUG55 rev50 cache-buster: 2026-05-05-drop-use-core-num-guard-add-dbg"
 
+        # Bug 55 rev 51: pre-CRU-reset diagnostic — read all 3 cores' task-complete
+        # counter (pc_task_status_offset) + INT_RAW_STATUS + INT_STATUS immediately
+        # before rknpu_soft_reset() fires (which clears all hardware state).
+        #
+        # Purpose: definitively distinguish two failure modes for tc=0:
+        #   tc > 0 on any core => NPU executed tasks but IRQ/completion path is broken
+        #   tc = 0 on all cores => OP_EN is silently rejected (clock/power/config issue)
+        #
+        # Uses rknpu_dev->config->pc_task_status_offset (same field as Rev 41 op-patch).
+        # readl() used directly to iterate over all cores; REG_READ macro uses core_index.
+        python3 -c "import base64,sys; exec(base64.b64decode(b'aW1wb3J0IHN5cwpkID0gb3Blbignc3JjL3JrbnB1X2pvYi5jJykucmVhZCgpCgpubCA9IGNocig5MikgKyAnbicKCiMgUmV2IDUxOiBpbnNlcnQgYSBwcmUtcmVzZXQgZGlhZ25vc3RpYyBibG9jayBiZWZvcmUgZXZlcnkgcmtucHVfc29mdF9yZXNldChya25wdV9kZXYpCiMgY2FsbCBpbiBya25wdV9qb2IuYy4gUmVhZHMgYWxsIDMgY29yZXMnIHBjX3Rhc2tfc3RhdHVzICh0YXNrLWNvbXBsZXRlIGNvdW50ZXIpLAojIElOVF9SQVdfU1RBVFVTLCBhbmQgSU5UX1NUQVRVUyBqdXN0IGJlZm9yZSB0aGUgQ1JVIHJlc2V0IGVyYXNlcyBoYXJkd2FyZSBzdGF0ZS4KIwojIFB1cnBvc2U6IGRlZmluaXRpdmVseSBhbnN3ZXIgd2hldGhlciBPUF9FTiB0cmlnZ2VyZWQgYW55IE5QVSBleGVjdXRpb246CiMgICB0YyA+IDAgPT4gdGFza3MgcmFuIGJ1dCB0aGUgSVJRL2NvbXBsZXRpb24gcGF0aCBpcyBicm9rZW4KIyAgIHRjID0gMCA9PiBPUF9FTiBpcyBiZWluZyBzaWxlbnRseSByZWplY3RlZCBieSBoYXJkd2FyZQojCiMgVXNlcyBya25wdV9kZXYtPmNvbmZpZy0+cGNfdGFza19zdGF0dXNfb2Zmc2V0IChzYW1lIGZpZWxkIGFzIFJldiA0MSBvcC1wYXRjaCkuCiMgcmVhZGwoKSBpcyB1c2VkIGRpcmVjdGx5IHNvIHdlIGNhbiBpbmRleCBiYXNlW2ldOyBSRUdfUkVBRCB1c2VzIGNvcmVfaW5kZXguCgpvbGQ1MSA9ICdcdHJrbnB1X3NvZnRfcmVzZXQocmtucHVfZGV2KTtcbicKCm5ldzUxID0gKAogICAgJ1x0LyogQnVnIDU1IHJldiA1MTogcHJlLXJlc2V0IGRpYWdub3N0aWMgLS0gcmVhZCBhbGwgMyBjb3Jlc1wnXG4nCiAgICAnXHQgKiBwY190YXNrX3N0YXR1cyArIElOVF9SQVdfU1RBVFVTIGJlZm9yZSBya25wdV9zb2Z0X3Jlc2V0KClcbicKICAgICdcdCAqIGNsZWFycyB0aGVtLiAgdGM+MCA9IHRhc2tzIHJhbiAoSVJRIHBhdGggYnJva2VuKTsgdGM9MCA9IE9QX0VOXG4nCiAgICAnXHQgKiBzaWxlbnRseSByZWplY3RlZCBieSBoYXJkd2FyZS4gKi9cbicKICAgICdcdHtcbicKICAgICdcdFx0aW50IF9yNTFfaTtcbicKICAgICdcdFx0Zm9yIChfcjUxX2kgPSAwOyBfcjUxX2kgPCBya25wdV9kZXYtPmNvbmZpZy0+bnVtX2lycXM7IF9yNTFfaSsrKSB7XG4nCiAgICAnXHRcdFx0dTMyIF90YyAgPSByZWFkbChya25wdV9kZXYtPmJhc2VbX3I1MV9pXSArXG4nCiAgICAnXHRcdFx0XHRcdCBya25wdV9kZXYtPmNvbmZpZy0+cGNfdGFza19zdGF0dXNfb2Zmc2V0KTtcbicKICAgICdcdFx0XHR1MzIgX2lycyA9IHJlYWRsKHJrbnB1X2Rldi0+YmFzZVtfcjUxX2ldICtcbicKICAgICdcdFx0XHRcdFx0IFJLTlBVX09GRlNFVF9JTlRfUkFXX1NUQVRVUyk7XG4nCiAgICAnXHRcdFx0dTMyIF9pc3QgPSByZWFkbChya25wdV9kZXYtPmJhc2VbX3I1MV9pXSArXG4nCiAgICAnXHRcdFx0XHRcdCBSS05QVV9PRkZTRVRfSU5UX1NUQVRVUyk7XG4nCiAgICAnXHRcdFx0TE9HX0RFVl9JTkZPKHJrbnB1X2Rldi0+ZGV2LFxuJwogICAgJ1x0XHRcdFx0IkJVRzU1IHI1MSBwcmUtcnN0OiBjaT0lZCB0Yz0weCV4IGlycz0weCV4IGlzdD0weCV4JyArIG5sICsgJyIsXG4nCiAgICAnXHRcdFx0XHRfcjUxX2ksIF90YywgX2lycywgX2lzdCk7XG4nCiAgICAnXHRcdH1cbicKICAgICdcdH1cbicKICAgICdcdHJrbnB1X3NvZnRfcmVzZXQocmtucHVfZGV2KTtcbicKKQoKY291bnQgPSBkLmNvdW50KG9sZDUxKQphc3NlcnQgY291bnQgPiAwLCAnUEFUQ0ggRkFJTEVEOiBya25wdV9zb2Z0X3Jlc2V0KHJrbnB1X2Rldikgbm90IGZvdW5kIGluIHJrbnB1X2pvYi5jJwpwcmludCgnRm91bmQge30gb2NjdXJyZW5jZXMgb2YgcmtucHVfc29mdF9yZXNldChya25wdV9kZXYpJy5mb3JtYXQoY291bnQpKQpkID0gZC5yZXBsYWNlKG9sZDUxLCBuZXc1MSkKb3Blbignc3JjL3JrbnB1X2pvYi5jJywgJ3cnKS53cml0ZShkKQpvayA9ICdCVUc1NSByNTEgcHJlLXJzdDonIGluIGQgYW5kICdwY190YXNrX3N0YXR1c19vZmZzZXQnIGluIGQKc3lzLmV4aXQoMCBpZiBvayBlbHNlIDEpCg==').decode())"
+        echo "BUG55 rev51 patch: OK"
+        echo "BUG55 rev51 cache-buster: 2026-05-05-pre-reset-tc-irs-ist-all-cores"
+
     build:
       - |
         # Diagnostic: confirm Kbuild content visible to the build step.
