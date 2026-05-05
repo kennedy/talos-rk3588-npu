@@ -952,6 +952,20 @@ steps:
         echo "BUG55 rev53 patch: OK"
         echo "BUG55 rev53 cache-buster: 2026-05-05-identify-int-mask-register-offset"
 
+        # Bug 55 rev 54: fix int_mask to 0xc0000000 (RK3588 job-done IRS bits 30+31).
+        #
+        # Rev 53 diagnostic confirmed (consistent across all 10 samples):
+        #   off_imask=0x300: INT_MASK write stuck (RKNPU_OFFSET_INT_MASK correct)
+        #   off_irs=0xc0000000: job-done IRS bits are 30+31, NOT 8+9
+        #   off_ist=0x0: INT_STATUS = IRS & INT_MASK = 0xc0000000 & 0x300 = 0
+        #
+        # With INT_MASK=0x300 (bits 8+9), IST is always 0 -> IRQ never fires
+        # -> completion waitqueue never signaled -> run_task_counter stuck.
+        # Force int_mask = 0xc0000000 so IST = 0xc0000000 on completion -> IRQ fires.
+        python3 -c "import base64,sys; exec(base64.b64decode(b'aW1wb3J0IHN5cwpkID0gb3Blbignc3JjL3JrbnB1X2pvYi5jJykucmVhZCgpCgpubCA9IGNocig5MikgKyAnbicKCiMgUmV2IDU0OiBmaXggaW50X21hc2sgdG8gMHhjMDAwMDAwMCAoUkszNTg4IGpvYi1kb25lIElSUyBiaXRzIDMwKzMxKS4KIwojIFJldiA1MyBkaWFnbm9zdGljIGNvbmZpcm1lZCAoY29uc2lzdGVudCBhY3Jvc3MgYWxsIDEwIHNhbXBsZXMpOgojICAgb2ZmX2ltYXNrPTB4MzAwOiBJTlRfTUFTSyB3cml0ZSBzdHVjayAoUktOUFVfT0ZGU0VUX0lOVF9NQVNLIGNvcnJlY3QpCiMgICBvZmZfaXJzPTB4YzAwMDAwMDA6IGpvYi1kb25lIElSUyBiaXRzIGFyZSAzMCszMSwgTk9UIDgrOQojICAgb2ZmX2lzdD0weDA6IElOVF9TVEFUVVMgPSBJUlMgJiBJTlRfTUFTSyA9IDB4YzAwMDAwMDAgJiAweDMwMCA9IDAKIwojIFRoZSBoYXJkd2FyZSBhc3NlcnRzIGJpdHMgMzArMzEgb24gam9iIGNvbXBsZXRpb24uIElOVF9NQVNLIG11c3QgZW5hYmxlCiMgdGhvc2UgYml0cy4gV2l0aCBJTlRfTUFTSz0weDMwMCAoYml0cyA4KzkpLCBJU1QgaXMgYWx3YXlzIDAgLT4gSVJRIG5ldmVyCiMgZmlyZXMgLT4gY29tcGxldGlvbiB3YWl0cXVldWUgbmV2ZXIgc2lnbmFsZWQgLT4gcnVuX3Rhc2tfY291bnRlciBzdHVjayBhdCAwLgojCiMgRm9yY2UgaW50X21hc2sgPSAweGMwMDAwMDAwIHVuY29uZGl0aW9uYWxseSAoaWdub3JlIHVzZXJzcGFjZSB2YWx1ZSkuCiMgSU5UX1NUQVRVUyA9IElSUyAmIDB4YzAwMDAwMDAgPSAweGMwMDAwMDAwIG9uIGNvbXBsZXRpb24gLT4gSVJRIGZpcmVzLgoKb2xkNTQgPSAoCiAgICAnXHRpZiAobGFzdF90YXNrLT5pbnRfbWFzayA9PSAwKVxuJwogICAgJ1x0XHRsYXN0X3Rhc2stPmludF9tYXNrID0gMHgzMDA7XG4nCiAgICAnXHRSRUdfV1JJVEUobGFzdF90YXNrLT5pbnRfbWFzaywgUktOUFVfT0ZGU0VUX0lOVF9NQVNLKTtcbicKKQoKbmV3NTQgPSAoCiAgICAnXHQvKiBCdWcgNTUgcmV2IDU0OiBmaXggaW50X21hc2sgdG8gMHhjMDAwMDAwMCAoYml0cyAzMCszMSA9IGFjdHVhbCBSSzM1ODhcbicKICAgICdcdCAqIGpvYi1kb25lIElSUyBiaXRzLCBjb25maXJtZWQgYnkgUmV2IDUzOiBJUlM9MHhjMDAwMDAwMCBldmVyeSBydW4pLlxuJwogICAgJ1x0ICogSU5UX1NUQVRVUyA9IElSUyAmIElOVF9NQVNLLiBSZXYgNTJhIHNldCAweDMwMCAoYml0cyA4KzkpIGJ1dCB0aGF0IGlzXG4nCiAgICAnXHQgKiB3cm9uZzogMHhjMDAwMDAwMCAmIDB4MzAwID0gMCAtPiBJU1Q9MCAtPiBJUlEgbmV2ZXIgZmlyZXMuXG4nCiAgICAnXHQgKiBGb3JjZSAweGMwMDAwMDAwIHVuY29uZGl0aW9uYWxseTogSVNUID0gMHhjMDAwMDAwMCBvbiBjb21wbGV0aW9uLiAqL1xuJwogICAgJ1x0bGFzdF90YXNrLT5pbnRfbWFzayA9IDB4YzAwMDAwMDA7XG4nCiAgICAnXHRSRUdfV1JJVEUobGFzdF90YXNrLT5pbnRfbWFzaywgUktOUFVfT0ZGU0VUX0lOVF9NQVNLKTtcbicKKQoKYXNzZXJ0IG9sZDU0IGluIGQsICdQQVRDSCBGQUlMRUQ6IFJldiA1MmEvNTMgaW50X21hc2s9MHgzMDAgYmxvY2sgbm90IGZvdW5kIGluIHJrbnB1X2pvYi5jJwpjb3VudCA9IGQuY291bnQob2xkNTQpCnByaW50KCdGb3VuZCB7fSBvY2N1cnJlbmNlcyBvZiBvbGQ1NCBhbmNob3InLmZvcm1hdChjb3VudCkpCmQgPSBkLnJlcGxhY2Uob2xkNTQsIG5ldzU0LCAxKQpvcGVuKCdzcmMvcmtucHVfam9iLmMnLCAndycpLndyaXRlKGQpCm9rID0gJ0J1ZyA1NSByZXYgNTQnIGluIGQgYW5kICdpbnRfbWFzayA9IDB4YzAwMDAwMDAnIGluIGQKc3lzLmV4aXQoMCBpZiBvayBlbHNlIDEpCg==').decode())"
+        echo "BUG55 rev54 patch: OK"
+        echo "BUG55 rev54 cache-buster: 2026-05-05-int-mask-0xc0000000-bits-30-31-job-done"
+
     build:
       - |
         # Diagnostic: confirm Kbuild content visible to the build step.
