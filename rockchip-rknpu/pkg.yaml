@@ -885,6 +885,18 @@ steps:
         echo "BUG55 rev49 patch: OK"
         echo "BUG55 rev49 cache-buster: 2026-05-05-redirect-ci0-to-ci2-irs-bit31-bypass"
 
+        # Bug 55 rev 50: drop use_core_num==1 guard from Rev 49's redirect
+        # condition; add unconditional debug log of use_core_num at runtime.
+        #
+        # Rev 49 never fired: BUG55 r49 absent from dmesg, all logs still
+        # show ci=0 through r46/r21/r16c/r41-op.  The two other sub-conditions
+        # (core_index==0 and num_irqs>=3) are confirmed true by r46+r47 output.
+        # Therefore job->use_core_num != 1 at the insertion point.  Drop the
+        # guard and add a BUG55 r50 dbg line so we can read the actual value.
+        python3 -c "import base64,sys; exec(base64.b64decode(b'aW1wb3J0IHN5cwpkID0gb3Blbignc3JjL3JrbnB1X2pvYi5jJykucmVhZCgpCgpubCA9IGNocig5MikgKyAnbicKCiMgUmV2IDUwOiBkcm9wIHRoZSB1c2VfY29yZV9udW09PTEgZ3VhcmQgdGhhdCBwcmV2ZW50ZWQgUmV2IDQ5IGZyb20gZmlyaW5nLgojIEFkZCB1bmNvbmRpdGlvbmFsIGRlYnVnIGxvZyB0byBjYXB0dXJlIHVzZV9jb3JlX251bSBhdCBydW50aW1lLgpvbGQ1MCA9ICgKICAgICdcdGlmIChqb2ItPnVzZV9jb3JlX251bSA9PSAxICYmIGNvcmVfaW5kZXggPT0gMCAmJlxuJwogICAgJ1x0ICAgIHJrbnB1X2Rldi0+Y29uZmlnLT5udW1faXJxcyA+PSAzKSB7XG4nCiAgICAnXHRcdGNvcmVfaW5kZXggPSBya25wdV9kZXYtPmNvbmZpZy0+bnVtX2lycXMgLSAxO1xuJwogICAgJ1x0XHRMT0dfREVWX0lORk8ocmtucHVfZGV2LT5kZXYsXG4nCiAgICAnXHRcdFx0IkJVRzU1IHI0OTogcmVkaXJlY3RlZCBjaSAwIC0+IGh3X2NpPSVkIChudW1faXJxcz0lZCknICsgbmwgKyAnIixcbicKICAgICdcdFx0XHRjb3JlX2luZGV4LCBya25wdV9kZXYtPmNvbmZpZy0+bnVtX2lycXMpO1xuJwogICAgJ1x0fVxuJwopCgpuZXc1MCA9ICgKICAgICdcdC8qIEJ1ZyA1NSByZXYgNTA6IGxvZyBjb25kaXRpb24gdmFyaWFibGVzIHRvIGRpYWdub3NlIHdoeSBSZXYgNDlcJ3NcbicKICAgICdcdCAqIHVzZV9jb3JlX251bT09MSBndWFyZCBuZXZlciBmaXJlZC4gIERyb3AgdGhlIGd1YXJkOiByZWRpcmVjdFxuJwogICAgJ1x0ICogd2hlbmV2ZXIgY29yZV9pbmRleD09MCBhbmQgbnVtX2lycXM+PTMgcmVnYXJkbGVzcyBvZiB1c2VfY29yZV9udW1cbicKICAgICdcdCAqIChzYWZlOiBvbmx5IGRldGVybWluZXMgd2hpY2ggTU1JTyBiYXNlIElOVF9DTEVBUi9PUF9FTiB0YXJnZXQpLiAqL1xuJwogICAgJ1x0TE9HX0RFVl9JTkZPKHJrbnB1X2Rldi0+ZGV2LFxuJwogICAgJ1x0XHQiQlVHNTUgcjUwIGRiZzogY2k9JWQgdWNuPSVkIG5pcnFzPSVkJyArIG5sICsgJyIsXG4nCiAgICAnXHRcdGNvcmVfaW5kZXgsIGpvYi0+dXNlX2NvcmVfbnVtLCBya25wdV9kZXYtPmNvbmZpZy0+bnVtX2lycXMpO1xuJwogICAgJ1x0aWYgKGNvcmVfaW5kZXggPT0gMCAmJiBya25wdV9kZXYtPmNvbmZpZy0+bnVtX2lycXMgPj0gMykge1xuJwogICAgJ1x0XHRjb3JlX2luZGV4ID0gcmtucHVfZGV2LT5jb25maWctPm51bV9pcnFzIC0gMTtcbicKICAgICdcdFx0TE9HX0RFVl9JTkZPKHJrbnB1X2Rldi0+ZGV2LFxuJwogICAgJ1x0XHRcdCJCVUc1NSByNDk6IHJlZGlyZWN0ZWQgY2kgMCAtPiBod19jaT0lZCAobnVtX2lycXM9JWQpJyArIG5sICsgJyIsXG4nCiAgICAnXHRcdFx0Y29yZV9pbmRleCwgcmtucHVfZGV2LT5jb25maWctPm51bV9pcnFzKTtcbicKICAgICdcdH1cbicKKQoKYXNzZXJ0IG9sZDUwIGluIGQsICdQQVRDSCBGQUlMRUQ6IFJldiA0OSB1c2VfY29yZV9udW0gaWYtYmxvY2sgbm90IGZvdW5kIGluIHJrbnB1X2pvYi5jJwpkID0gZC5yZXBsYWNlKG9sZDUwLCBuZXc1MCwgMSkKb3Blbignc3JjL3JrbnB1X2pvYi5jJywgJ3cnKS53cml0ZShkKQpvayA9ICdCVUc1NSByNTAgZGJnOicgaW4gZCBhbmQgJ0JVRzU1IHI0OTonIGluIGQKc3lzLmV4aXQoMCBpZiBvayBlbHNlIDEpCg==').decode())"
+        echo "BUG55 rev50 patch: OK"
+        echo "BUG55 rev50 cache-buster: 2026-05-05-drop-use-core-num-guard-add-dbg"
+
     build:
       - |
         # Diagnostic: confirm Kbuild content visible to the build step.
