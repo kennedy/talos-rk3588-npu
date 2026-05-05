@@ -861,6 +861,30 @@ steps:
         echo "BUG55 rev48 patch: OK"
         echo "BUG55 rev48 cache-buster: 2026-05-04-dc-civac-dsb-sy-regcfg-flush"
 
+        # Bug 55 rev 49: redirect single-core ci=0 jobs to core 2 for all hardware
+        # register accesses.
+        #
+        # Hypothesis: core 0 has bits 30+31 permanently set in INT_RAW_STATUS
+        # (ILLEGAL_PARAM + DMA fault) as cold-boot hardware default.  INT_CLEAR
+        # (0xffffffff) does not clear them (Rev 21).  soft_reset restores them
+        # to 0xc0000000 rather than clearing (Rev 24).  With bits 30+31 set,
+        # OP_EN is silently rejected by the hardware interlock: st=0, tc=0.
+        #
+        # Core 2 has only bit 30 at cold boot which auto-cleared before OP_EN
+        # in Rev 24's experiment, allowing inference (ci=2 produced tc>0 in the
+        # original Rev 24 test that first isolated this per-core difference).
+        #
+        # Approach: for single-core jobs (use_core_num==1, core_index==0), after
+        # task_start/task_end/task_base are already local variables (derived from
+        # subcore_task[0] which librknnrt 2.3.2 populates), reassign core_index
+        # to num_irqs-1 (=2 for RK3588).  All subsequent REG_WRITE/REG_READ calls
+        # use base[core_index] -- after reassignment they target core 2's MMIO.
+        # INT_CLEAR, PC_DMA_BASE_ADDR, PC_TASK_CONTROL, and OP_EN all run on
+        # core 2 where the sticky DMA-fault bit does not permanently block OP_EN.
+        python3 -c "import base64,sys; exec(base64.b64decode(b'aW1wb3J0IHN5cwpkID0gb3Blbignc3JjL3JrbnB1X2pvYi5jJykucmVhZCgpCgpubCA9IGNocig5MikgKyAnbicKCm9sZDQ5ID0gKAogICAgJ1x0LyogQnVnIDU1IHJldiA0NjogZHJhaW4gdXNlci1zcGFjZSBXQyB3cml0ZSBidWZmZXIgdG8gRFJBTS5cbicKICAgICdcdCAqIGxpYnJrbm5ydCB3cml0ZXMgdGFzayBkZXNjcmlwdG9ycyB2aWEgcGdwcm90X3dyaXRlY29tYmluZSBtbWFwO1xuJwopCgpuZXc0OSA9ICgKICAgICdcdC8qIEJ1ZyA1NSByZXYgNDk6IHJlZGlyZWN0IHNpbmdsZS1jb3JlIGNpPTAgam9icyB0byBjaT0yIGZvciBhbGxcbicKICAgICdcdCAqIGhhcmR3YXJlIHJlZ2lzdGVyIGFjY2Vzc2VzIChJTlRfQ0xFQVIsIFBDX0RNQV9CQVNFX0FERFIsXG4nCiAgICAnXHQgKiBQQ19UQVNLX0NPTlRST0wsIE9QX0VOLCBldGMuKS5cbicKICAgICdcdCAqXG4nCiAgICAnXHQgKiBDb3JlIDAgaGFzIGJpdHMgMzArMzEgcGVybWFuZW50bHkgc2V0IGluIElOVF9SQVdfU1RBVFVTXG4nCiAgICAnXHQgKiAoSUxMRUdBTF9QQVJBTSArIERNQSBmYXVsdCkgYXMgY29sZC1ib290IGhhcmR3YXJlIGRlZmF1bHQuXG4nCiAgICAnXHQgKiBJTlRfQ0xFQVIgKDB4ZmZmZmZmZmYpIGRvZXMgbm90IGNsZWFyIHRoZW0gKGNvbmZpcm1lZCBSZXYgMjEpLlxuJwogICAgJ1x0ICogc29mdF9yZXNldCByZXN0b3JlcyByYXRoZXIgdGhhbiBjbGVhcnMgdGhlbSAoY29uZmlybWVkIFJldiAyNCkuXG4nCiAgICAnXHQgKiBXaXRoIGJpdHMgMzArMzEgc2V0LCBPUF9FTiBpcyBzaWxlbnRseSByZWplY3RlZDogc3Qgc3RheXMgMFxuJwogICAgJ1x0ICogYW5kIHRjIHN0YXlzIDAgcGVybWFuZW50bHkuXG4nCiAgICAnXHQgKlxuJwogICAgJ1x0ICogQ29yZSAyIGhhcyBvbmx5IGJpdCAzMCBhdCBjb2xkIGJvb3Qgd2hpY2ggYXV0by1jbGVhcnMgYmVmb3JlXG4nCiAgICAnXHQgKiBPUF9FTiAoY29uZmlybWVkIFJldiAyNCkuICBGb3Igc2luZ2xlLWNvcmUgam9icywgdGFzayBwYXJhbXNcbicKICAgICdcdCAqICh0YXNrX3N0YXJ0LCB0YXNrX2VuZCwgdGFza19iYXNlKSBhcmUgYWxyZWFkeSBpbiBsb2NhbCB2YXJpYWJsZXNcbicKICAgICdcdCAqIGRlcml2ZWQgZnJvbSBzdWJjb3JlX3Rhc2tbMF07IHJlYXNzaWduaW5nIGNvcmVfaW5kZXggaGVyZVxuJwogICAgJ1x0ICogcmVkaXJlY3RzIGFsbCBzdWJzZXF1ZW50IFJFR19XUklURS9SRUdfUkVBRCBjYWxscyB0byBjb3JlIDIuXG4nCiAgICAnXHQgKiBsaWJya25ucnQgMi4zLjIgb25seSBwb3B1bGF0ZXMgc3ViY29yZV90YXNrWzBdLCBzbyB0YXNrIGRhdGFcbicKICAgICdcdCAqIHJlYWRzIHJlbWFpbiB2YWxpZDsgaGFyZHdhcmUgcmVnaXN0ZXIgd3JpdGVzIG1vdmUgdG8gY29yZSAyLiAqL1xuJwogICAgJ1x0aWYgKGpvYi0+dXNlX2NvcmVfbnVtID09IDEgJiYgY29yZV9pbmRleCA9PSAwICYmXG4nCiAgICAnXHQgICAgcmtucHVfZGV2LT5jb25maWctPm51bV9pcnFzID49IDMpIHtcbicKICAgICdcdFx0Y29yZV9pbmRleCA9IHJrbnB1X2Rldi0+Y29uZmlnLT5udW1faXJxcyAtIDE7XG4nCiAgICAnXHRcdExPR19ERVZfSU5GTyhya25wdV9kZXYtPmRldixcbicKICAgICdcdFx0XHQiQlVHNTUgcjQ5OiByZWRpcmVjdGVkIGNpIDAgLT4gaHdfY2k9JWQgKG51bV9pcnFzPSVkKScgKyBubCArICciLFxuJwogICAgJ1x0XHRcdGNvcmVfaW5kZXgsIHJrbnB1X2Rldi0+Y29uZmlnLT5udW1faXJxcyk7XG4nCiAgICAnXHR9XG4nCiAgICAnXHQvKiBCdWcgNTUgcmV2IDQ2OiBkcmFpbiB1c2VyLXNwYWNlIFdDIHdyaXRlIGJ1ZmZlciB0byBEUkFNLlxuJwogICAgJ1x0ICogbGlicmtubnJ0IHdyaXRlcyB0YXNrIGRlc2NyaXB0b3JzIHZpYSBwZ3Byb3Rfd3JpdGVjb21iaW5lIG1tYXA7XG4nCikKCmFzc2VydCBvbGQ0OSBpbiBkLCAnUEFUQ0ggRkFJTEVEOiBSZXYgNDYgRFNCIFNZIGNvbW1lbnQgbm90IGZvdW5kIGluIHJrbnB1X2pvYi5jJwpkID0gZC5yZXBsYWNlKG9sZDQ5LCBuZXc0OSwgMSkKb3Blbignc3JjL3JrbnB1X2pvYi5jJywgJ3cnKS53cml0ZShkKQpvayA9ICdCVUc1NSByNDk6JyBpbiBkIGFuZCAncmVkaXJlY3RlZCBjaSAwJyBpbiBkIGFuZCAnbnVtX2lycXMgPj0gMycgaW4gZApzeXMuZXhpdCgwIGlmIG9rIGVsc2UgMSkK').decode())"
+        echo "BUG55 rev49 patch: OK"
+        echo "BUG55 rev49 cache-buster: 2026-05-05-redirect-ci0-to-ci2-irs-bit31-bypass"
+
     build:
       - |
         # Diagnostic: confirm Kbuild content visible to the build step.
