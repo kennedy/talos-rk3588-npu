@@ -570,6 +570,16 @@ int rknpu_mem_create_ioctl(struct rknpu_device *rknpu_dev, struct file *file,
 	}
 
 	/*
+	 * Bug 55 rev 55d: expose buf->pages via buf->mem.pages so that
+	 * rknpu_job.c's task_obj->pages is non-NULL.  With pages=NULL the
+	 * r44 flush_dcache_page loop never runs (falls back to
+	 * dma_sync_single which is a no-op for IOMMU-mapped allocations).
+	 * With pages set, each task descriptor page is flushed by physical
+	 * address before NPU DMA, ensuring DRAM coherency.
+	 */
+	buf->mem.pages = buf->pages;
+
+	/*
 	 * Create a userspace-mmappable fd.  Memory freed via release callback
 	 * when the fd is closed.
 	 */
