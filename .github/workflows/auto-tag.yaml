@@ -28,7 +28,8 @@ jobs:
           source scripts/common.sh
           # Format: v<TALOS_VERSION>-rknpu<RKNPU_VERSION>
           # e.g.   v1.12.6-rknpu0.9.8
-          TAG="v${TALOS_VERSION}-rknpu${RKNPU_VERSION}"
+          # Strip any leading 'v' from TALOS_VERSION so we don't produce a double-v tag.
+          TAG="v${TALOS_VERSION#v}-rknpu${RKNPU_VERSION}"
           echo "TAG=${TAG}" >> "${GITHUB_OUTPUT}"
 
       - name: Create tag if not exists
