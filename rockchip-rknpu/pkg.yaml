@@ -24,14 +24,19 @@ steps:
       #
       # Pin to a specific commit, NOT refs/heads/main.tar.gz: the branch tarball is a
       # moving target, so every upstream push changes its content and breaks the pinned
-      # checksum (bldr "digest mismatch"). A commit tarball is content-addressable and
-      # reproducible. Update this commit + both hashes deliberately when adopting new
-      # upstream fixes (the source patches below assert on structure, so drift is caught).
-      # Commit a8792fe (2026-04-28) — https://github.com/w568w/rknpu-module/commit/a8792fe6b633f90cf2c6808267cac327537ab4cf
-      - url: https://github.com/w568w/rknpu-module/archive/a8792fe6b633f90cf2c6808267cac327537ab4cf.tar.gz
+      # checksum (bldr "digest mismatch"). A commit tarball is content-addressable.
+      #
+      # Commit 1466311 (2026-03-02) is the LAST w568w commit before the 2026-04-21
+      # "rewrite rknpu_probe / rewrite rknpu_power_on" refactor. The source patches below
+      # (probe/power/heap/clk workarounds) assert on the pre-refactor code and only apply
+      # cleanly here — verified 54/54 patches apply against this tree; latest main fails 7.
+      # Do NOT bump this without re-porting those 7 patches to the refactored probe/power
+      # code and re-validating all 54 on real RK1 hardware.
+      # https://github.com/w568w/rknpu-module/commit/14663116c182e095abde4cc278b8c86a64839a5f
+      - url: https://github.com/w568w/rknpu-module/archive/14663116c182e095abde4cc278b8c86a64839a5f.tar.gz
         destination: rknpu-module.tar.gz
-        sha256: "174b792fba777539d725eb41d82ed8b57463ac07c7ae3bcd22ed536c9bb050c7"
-        sha512: "316fe2e482e6bd2306b681c3f202599d57f90757035b508bc091365b8bbcf1ac78d19f43d1ab398b7d799d1bac8c4226e24bb08e4f0f1bfa4ed17c24576a77ac"
+        sha256: "13bd9667bfd5e3b11e9edb9e83e38b2db8feff6e9750689383b42bc1332167b4"
+        sha512: "e5fefe6e446b9a1ab7eadd4498f2ef3ae4b636e743630192906eeec36958d090928473835418c5d748405989594a08930c5161e83ad862f387a858a1f655da11"
     env:
       ARCH: arm64
     prepare:
