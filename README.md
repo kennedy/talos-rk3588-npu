@@ -30,12 +30,12 @@ and [talos-sbc-rk3588](https://github.com/milas/talos-sbc-rk3588).
 
 ## 1. Supported Hardware
 
-| Board | SoC | Status |
-|-------|-----|--------|
-| [Turing RK1](https://turingpi.com/product/turing-rk1/) (on Turing Pi 2) | RK3588 | ✅ Tested |
-| [FriendlyElec CM3588](https://www.friendlyelec.com/index.php?route=product/product&product_id=299) | RK3588 | 🔧 Planned |
-| Radxa Rock 5B | RK3588 | 🔧 Planned |
-| Orange Pi 5 Plus | RK3588S | 🔧 Planned |
+| Board                                                                                              | SoC     | Status     |
+| -------------------------------------------------------------------------------------------------- | ------- | ---------- |
+| [Turing RK1](https://turingpi.com/product/turing-rk1/) (on Turing Pi 2)                            | RK3588  | ✅ Tested  |
+| [FriendlyElec CM3588](https://www.friendlyelec.com/index.php?route=product/product&product_id=299) | RK3588  | 🔧 Planned |
+| Radxa Rock 5B                                                                                      | RK3588  | 🔧 Planned |
+| Orange Pi 5 Plus                                                                                   | RK3588S | 🔧 Planned |
 
 The NPU system extension and device plugin are **board-agnostic** — only the Talos
 installer image (U-Boot + DTB) is board-specific.
@@ -111,7 +111,7 @@ CDI device plugin (rockchip.com/npu: "1" in resources.limits)
 talosctl upgrade \
   --nodes <NODE_IP> \
   --talosconfig ./npu-test-talosconfig \
-  --image ghcr.io/schwankner/talos-rk3588-npu-installer-base:installer-v1.13.0-rc.0 \
+  --image ghcr.io/schwankner/talos-rk3588-npu-installer-base:installer-v1.13.4 \
   --preserve
 
 # 2. Apply machine config (adds NPU extensions)
@@ -194,13 +194,13 @@ talos-rk3588-npu/
 
 All versions are pinned in `scripts/common.sh`.
 
-| Component | Version | Notes |
-|-----------|---------|-------|
-| Talos Linux | v1.13.0-rc.0 | CDI enabled in containerd by default |
-| Linux kernel | 6.18.22-talos | Mainline, Clang/ThinLTO build |
-| siderolabs/pkgs | b121566 | Pinned to Talos v1.13.0-rc.0 |
-| rknpu driver | 0.9.10 | [w568w/rknpu-module](https://github.com/w568w/rknpu-module), mainline-compatible |
-| librknnrt.so | 2.3.2 | [airockchip/rknn-toolkit2](https://github.com/airockchip/rknn-toolkit2) |
+| Component       | Version       | Notes                                                                            |
+| --------------- | ------------- | -------------------------------------------------------------------------------- |
+| Talos Linux     | v1.13.4       | CDI enabled in containerd by default                                             |
+| Linux kernel    | 6.18.34-talos | Mainline, Clang/ThinLTO build                                                    |
+| siderolabs/pkgs | 54ec9fc       | Pinned to Talos v1.13.4                                                          |
+| rknpu driver    | 0.9.17.4      | [w568w/rknpu-module](https://github.com/w568w/rknpu-module), mainline-compatible |
+| librknnrt.so    | 2.3.2         | [airockchip/rknn-toolkit2](https://github.com/airockchip/rknn-toolkit2)          |
 
 ---
 
@@ -231,12 +231,12 @@ Push to `main` with a change to `scripts/common.sh`:
 
 ### Produced images
 
-| Image | Tag format | Example |
-|-------|-----------|---------|
-| `ghcr.io/schwankner/rockchip-rknpu` | `<rknpu>-<kernel>` | `0.9.10-6.18.22-talos` |
-| `ghcr.io/schwankner/rockchip-rknn-libs` | `<rknn>-<kernel>` | `2.3.2-6.18.22-talos` |
-| `ghcr.io/schwankner/rk3588-npu-device-plugin` | `v<release>` | `v1.13.0-rc.0-rknpu0.9.10` |
-| `ghcr.io/schwankner/talos-rk3588-npu-installer-base` | `installer-v<talos>` | `installer-v1.13.0-rc.0` |
+| Image                                                | Tag format           | Example                  |
+| ---------------------------------------------------- | -------------------- | ------------------------ |
+| `ghcr.io/schwankner/rockchip-rknpu`                  | `<rknpu>-<kernel>`   | `0.9.17.4-6.18.34-talos` |
+| `ghcr.io/schwankner/rockchip-rknn-libs`              | `<rknn>-<kernel>`    | `2.3.2-6.18.34-talos`    |
+| `ghcr.io/schwankner/rk3588-npu-device-plugin`        | `v<release>`         | `v1.13.4-rknpu0.9.17.4`  |
+| `ghcr.io/schwankner/talos-rk3588-npu-installer-base` | `installer-v<talos>` | `installer-v1.13.4`      |
 
 > **Note:** Extensions are **baked into the installer** as squashfs blobs at build time.
 > They are not pulled from the registry at node boot. Always rebuild the installer after
@@ -248,8 +248,8 @@ Push to `main` with a change to `scripts/common.sh`:
 
 ### Prerequisites
 
-- Talos Linux v1.13.0-rc.0 on your RK3588 board (via [factory.talos.dev](https://factory.talos.dev) with `sbc-rockchip` overlay)
-- `talosctl` v1.13.0-rc.0, `kubectl`
+- Talos Linux v1.13.4 on your RK3588 board (via [factory.talos.dev](https://factory.talos.dev) with `sbc-rockchip` overlay)
+- `talosctl` v1.13.4, `kubectl`
 - Images are public on GHCR; no authentication needed to pull
 
 ### Step 1 — Upgrade to the NPU installer
@@ -261,7 +261,7 @@ The custom installer embeds the kernel whose module-signing key was used to buil
 talosctl upgrade \
   --nodes <NODE_IP> \
   --talosconfig ./your-talosconfig \
-  --image ghcr.io/schwankner/talos-rk3588-npu-installer-base:installer-v1.13.0-rc.0 \
+  --image ghcr.io/schwankner/talos-rk3588-npu-installer-base:installer-v1.13.4 \
   --preserve
 ```
 
@@ -271,8 +271,8 @@ talosctl upgrade \
 machine:
   install:
     extensions:
-      - image: ghcr.io/schwankner/rockchip-rknpu:0.9.10-6.18.22-talos
-      - image: ghcr.io/schwankner/rockchip-rknn-libs:2.3.2-6.18.22-talos
+      - image: ghcr.io/schwankner/rockchip-rknpu:0.9.17.4-6.18.34-talos
+      - image: ghcr.io/schwankner/rockchip-rknn-libs:2.3.2-6.18.34-talos
 
   sysctls:
     user.max_user_namespaces: "15000"
@@ -344,11 +344,11 @@ spec:
 When `rockchip.com/npu: "1"` is in `resources.limits`, the device plugin's CDI spec
 causes containerd to inject:
 
-| Path in container | Source on host | Purpose |
-|-------------------|----------------|---------|
-| `/dev/rknpu` | `/dev/rknpu` | NPU misc device (rknpu.ko) — inference job submission |
-| `/dev/dma_heap/system` | `/dev/dma_heap/system` | Zero-copy CPU↔NPU DMA buffer allocation |
-| `/usr/lib/librknnrt.so` | `/usr/lib/librknnrt.so` | RKNN runtime (bind-mount from Talos extension) |
+| Path in container       | Source on host          | Purpose                                               |
+| ----------------------- | ----------------------- | ----------------------------------------------------- |
+| `/dev/rknpu`            | `/dev/rknpu`            | NPU misc device (rknpu.ko) — inference job submission |
+| `/dev/dma_heap/system`  | `/dev/dma_heap/system`  | Zero-copy CPU↔NPU DMA buffer allocation               |
+| `/usr/lib/librknnrt.so` | `/usr/lib/librknnrt.so` | RKNN runtime (bind-mount from Talos extension)        |
 
 ### Note on `procMount: Unmasked`
 
@@ -390,6 +390,7 @@ No DRM render nodes (`/dev/dri/renderD*`) are involved in this architecture.
 ### udev rules
 
 `rknpu.ko` ships a udev rule (`90-rknpu.rules`) that:
+
 - Sets `/dev/rknpu` to `0666` (unprivileged container reads/writes)
 - Sets `/dev/dma_heap/system` to `0666` (required for DMA buffer allocation)
 
@@ -409,40 +410,40 @@ three IOMMU controllers are held active, and all sub-cores respond to inference 
 
 **Per-core diagnostic (ResNet18 INT8, 10 iterations):**
 
-| Core mask | init_runtime | 10-iter avg | Throughput |
-|-----------|-------------|-------------|-----------|
-| CORE_AUTO (0) | ret=0 | 7.0 ms | 143.8 fps |
-| CORE_0 (1) | ret=0 | 7.0 ms | 142.2 fps |
-| CORE_1 (2) | ret=0 | 7.2 ms | 138.4 fps |
-| CORE_2 (4) | ret=0 | 7.3 ms | 136.9 fps |
-| CORE_0+1 (3) | ret=0 | 6.9 ms | 144.5 fps |
-| CORE_0+1+2 (7) | ret=0 | **5.6 ms** | **179.6 fps** |
+| Core mask      | init_runtime | 10-iter avg | Throughput    |
+| -------------- | ------------ | ----------- | ------------- |
+| CORE_AUTO (0)  | ret=0        | 7.0 ms      | 143.8 fps     |
+| CORE_0 (1)     | ret=0        | 7.0 ms      | 142.2 fps     |
+| CORE_1 (2)     | ret=0        | 7.2 ms      | 138.4 fps     |
+| CORE_2 (4)     | ret=0        | 7.3 ms      | 136.9 fps     |
+| CORE_0+1 (3)   | ret=0        | 6.9 ms      | 144.5 fps     |
+| CORE_0+1+2 (7) | ret=0        | **5.6 ms**  | **179.6 fps** |
 
 ### Single-thread results
 
 CPU mode = ARM Cortex-A76 fallback path inside `librknnrt.so`.
 Python = `rknnlite.inference()`. C API = direct `rknn_inputs_set` / `rknn_run`.
 
-| Model | Quant | Runtime | Throughput | Latency | vs CPU |
-|-------|-------|---------|-----------|---------|--------|
-| ResNet18 224×224 | INT8 | CPU (Python) | 136.9 fps | 7.30 ms | baseline |
-| ResNet18 224×224 | INT8 | NPU Python | 130.0 fps | 7.69 ms | 0.95× |
-| ResNet18 224×224 | INT8 | NPU C API | **146.3 fps** | **6.84 ms** | **1.07×** |
-| ResNet50 224×224 | fp16 | CPU (Python) | 24.7 fps | 40.44 ms | baseline |
-| ResNet50 224×224 | fp16 | NPU Python | 29.3 fps | 34.16 ms | 1.19× |
-| YOLOv5s 640×640 | INT8 | CPU (Python) | 21.1 fps | 47.42 ms | baseline |
-| YOLOv5s 640×640 | INT8 | NPU Python | 25.5 fps | 39.15 ms | 1.21× |
-| YOLOv5s 640×640 | INT8 | NPU C API | 21.5 fps | 46.41 ms | 1.02× ¹ |
+| Model            | Quant | Runtime      | Throughput    | Latency     | vs CPU    |
+| ---------------- | ----- | ------------ | ------------- | ----------- | --------- |
+| ResNet18 224×224 | INT8  | CPU (Python) | 136.9 fps     | 7.30 ms     | baseline  |
+| ResNet18 224×224 | INT8  | NPU Python   | 130.0 fps     | 7.69 ms     | 0.95×     |
+| ResNet18 224×224 | INT8  | NPU C API    | **146.3 fps** | **6.84 ms** | **1.07×** |
+| ResNet50 224×224 | fp16  | CPU (Python) | 24.7 fps      | 40.44 ms    | baseline  |
+| ResNet50 224×224 | fp16  | NPU Python   | 29.3 fps      | 34.16 ms    | 1.19×     |
+| YOLOv5s 640×640  | INT8  | CPU (Python) | 21.1 fps      | 47.42 ms    | baseline  |
+| YOLOv5s 640×640  | INT8  | NPU Python   | 25.5 fps      | 39.15 ms    | 1.21×     |
+| YOLOv5s 640×640  | INT8  | NPU C API    | 21.5 fps      | 46.41 ms    | 1.02× ¹   |
 
 ¹ C API YOLOv5s run used 500 iterations (~23 s); thermal throttling degraded throughput
-  vs the shorter Python run (100 iters, ~4 s).
+vs the shorter Python run (100 iters, ~4 s).
 
 **NPU hardware compute time** (from `rknn.eval_perf()`, no API or DMA overhead):
 
-| Model | Quant | NPU compute only | Theoretical fps |
-|-------|-------|-----------------|-----------------|
-| ResNet18 224×224 | INT8 | 3.68 ms | 272 fps |
-| YOLOv5s 640×640 | INT8 | 18.79 ms | 53 fps |
+| Model            | Quant | NPU compute only | Theoretical fps |
+| ---------------- | ----- | ---------------- | --------------- |
+| ResNet18 224×224 | INT8  | 3.68 ms          | 272 fps         |
+| YOLOv5s 640×640  | INT8  | 18.79 ms         | 53 fps          |
 
 The gap between the hardware compute time and actual throughput (272 → 147 fps for
 ResNet18) is DMA buffer setup and kernel-driver round-trip overhead — not Python API
@@ -454,7 +455,7 @@ overhead. Python `rknnlite` overhead in SDK 2.3.2 is only **~0.5 ms** per call
 **ResNet18 INT8, 1000 iters/thread:**
 
 | Threads | Agg. throughput | Per-thread latency | vs single-thread |
-|---------|----------------|--------------------|-----------------|
+| ------- | --------------- | ------------------ | ---------------- |
 | 1       | 146.1 fps       | 6.85 ms            | baseline         |
 | 3       | 156.2 fps       | 19.20 ms (+2.8×)   | +7% aggregate    |
 | 6       | 155.9 fps       | 38.47 ms (+5.6×)   | +7% aggregate    |
@@ -462,7 +463,7 @@ overhead. Python `rknnlite` overhead in SDK 2.3.2 is only **~0.5 ms** per call
 **YOLOv5s INT8, 200 iters/thread:**
 
 | Threads | Agg. throughput | Per-thread avg latency | vs single-thread |
-|---------|-----------------|------------------------|-----------------|
+| ------- | --------------- | ---------------------- | ---------------- |
 | 1       | 21.5 fps        | 46.41 ms               | baseline         |
 | 3       | 38.8 fps        | 68.81 ms (+1.5×)       | +1.8× aggregate  |
 
@@ -479,17 +480,17 @@ overhead. Python `rknnlite` overhead in SDK 2.3.2 is only **~0.5 ms** per call
 
 See [BUGS.md](BUGS.md) for documented issues and solutions. Selected entries:
 
-| Bug | Summary |
-|-----|---------|
-| Bug 43 | `virt_dev` suspended after probe, NPU PM domain not reachable |
-| Bug 44 | `nputop` genpd domain not attached on mainline DT |
-| Bug 45/46 | NPU IOMMU clock gating causes AXI lockup in `init_runtime()` |
-| Bug 47 | `RKNPU_MEM_CREATE` ioctl unimplemented — fixed with `dma_alloc_coherent` |
-| Bug 47 rev 2 | Wrong `obj_addr` returned from `RKNPU_MEM_CREATE` caused silent 3×60 s timeout |
-| Bug 49 | `RKNN_NPU_CORE_AUTO` with concurrent multi-context inference deadlocks rknpu.ko |
-| Bug 50 | BuildKit layer-diff zeroes gcc binaries when large download + compile land in same RUN layer |
-| Bug 51 | Concurrent `rknn_init` from N threads crashes rknpu.ko kernel driver |
-| Bug 52 ✅ | CORE_1 and CORE_2 inaccessible — rknpu.ko non-IOMMU mode, missing DT `iommus` property. Fixed: DTB patcher adds `iommus` property; driver patch holds all 3 IOMMU clocks active. All 3 cores verified working (179.6 fps CORE_0_1_2). |
+| Bug          | Summary                                                                                                                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bug 43       | `virt_dev` suspended after probe, NPU PM domain not reachable                                                                                                                                                                         |
+| Bug 44       | `nputop` genpd domain not attached on mainline DT                                                                                                                                                                                     |
+| Bug 45/46    | NPU IOMMU clock gating causes AXI lockup in `init_runtime()`                                                                                                                                                                          |
+| Bug 47       | `RKNPU_MEM_CREATE` ioctl unimplemented — fixed with `dma_alloc_coherent`                                                                                                                                                              |
+| Bug 47 rev 2 | Wrong `obj_addr` returned from `RKNPU_MEM_CREATE` caused silent 3×60 s timeout                                                                                                                                                        |
+| Bug 49       | `RKNN_NPU_CORE_AUTO` with concurrent multi-context inference deadlocks rknpu.ko                                                                                                                                                       |
+| Bug 50       | BuildKit layer-diff zeroes gcc binaries when large download + compile land in same RUN layer                                                                                                                                          |
+| Bug 51       | Concurrent `rknn_init` from N threads crashes rknpu.ko kernel driver                                                                                                                                                                  |
+| Bug 52 ✅    | CORE_1 and CORE_2 inaccessible — rknpu.ko non-IOMMU mode, missing DT `iommus` property. Fixed: DTB patcher adds `iommus` property; driver patch holds all 3 IOMMU clocks active. All 3 cores verified working (179.6 fps CORE_0_1_2). |
 
 ---
 
