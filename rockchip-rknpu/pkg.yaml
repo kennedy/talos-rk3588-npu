@@ -21,10 +21,17 @@ steps:
       # w568w/rknpu-module: out-of-tree Rockchip vendor rknpu driver, ported to mainline kernel.
       # Tested on kernel 6.19 (works on 6.18 as well — identical API surface).
       # Version 0.9.8 matches RKNN SDK / librknnrt.so 2.3.x ABI.
-      - url: https://github.com/w568w/rknpu-module/archive/refs/heads/main.tar.gz
+      #
+      # Pin to a specific commit, NOT refs/heads/main.tar.gz: the branch tarball is a
+      # moving target, so every upstream push changes its content and breaks the pinned
+      # checksum (bldr "digest mismatch"). A commit tarball is content-addressable and
+      # reproducible. Update this commit + both hashes deliberately when adopting new
+      # upstream fixes (the source patches below assert on structure, so drift is caught).
+      # Commit a8792fe (2026-04-28) — https://github.com/w568w/rknpu-module/commit/a8792fe6b633f90cf2c6808267cac327537ab4cf
+      - url: https://github.com/w568w/rknpu-module/archive/a8792fe6b633f90cf2c6808267cac327537ab4cf.tar.gz
         destination: rknpu-module.tar.gz
-        sha256: "4ad3a6fc8afdc53cacbebe4b7075e40c7c46a5fbb457a0efc28c6d4dc93d271f"
-        sha512: "02a5a2642835227559d00f49a61f2bdbae1f75aa76bcb5731d0d19e3cf6b48e8902c7949635f219faf8693ce5ee228fb38d6d80e4ce0d8f4792a9ee15fa9b1bc"
+        sha256: "174b792fba777539d725eb41d82ed8b57463ac07c7ae3bcd22ed536c9bb050c7"
+        sha512: "316fe2e482e6bd2306b681c3f202599d57f90757035b508bc091365b8bbcf1ac78d19f43d1ab398b7d799d1bac8c4226e24bb08e4f0f1bfa4ed17c24576a77ac"
     env:
       ARCH: arm64
     prepare:
