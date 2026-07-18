@@ -19,7 +19,16 @@ jobs:
         run: |
           shellcheck --severity=warning \
             scripts/common.sh \
-            scripts/build-extensions.sh
+            scripts/build-extensions.sh \
+            scripts/derive-versions.sh
+
+  verify-versions:
+    name: Verify derived versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PKGS_COMMIT matches TALOS_VERSION
+        run: bash scripts/derive-versions.sh --verify
 
   go-vet:
     name: Go vet (device plugin)
