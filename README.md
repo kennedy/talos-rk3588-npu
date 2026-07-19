@@ -8,6 +8,21 @@ Talos Linux's mainline kernel 6.18+ with the Container Device Interface (CDI).
 Inspired by [talos-jetson-orin-nx](https://github.com/schwankner/talos-jetson-orin-nx)
 and [talos-sbc-rk3588](https://github.com/milas/talos-sbc-rk3588).
 
+> ## ⚠️ Status: inference is currently non-functional (Bug 55)
+>
+> On a real Turing RK1 (Talos v1.13.6 / kernel 6.18.38-talos, 2026-07-19) the driver
+> **loads** and `init_runtime()` **succeeds**, but **every inference fails** with
+> `E RKNN: failed to submit! ... int status: 0`. `dmesg` shows the upstream debug
+> instrumentation `BUG55 r55c poll[N]: ist=0x0` — the NPU **job-done interrupt never
+> fires** (`ist` stays `0`), so submitted jobs never complete. This is the upstream's
+> unresolved **Bug 55**; the last driver commits were still debugging it, not fixing it.
+>
+> The `rknpu.ko` build, module signing, CDI injection, device-plugin advertisement, and
+> non-privileged wiring all work — the blocker is purely the hardware completion IRQ.
+> Until that is resolved, **this stack cannot run RKNN inference.** The downstream
+> consumer (Immich ML in the `taloskubecluster` homelab) has been kept on the CPU
+> backend. See [Bug 55](#11-known-issues) below.
+
 ---
 
 ## Table of Contents
@@ -480,17 +495,18 @@ overhead. Python `rknnlite` overhead in SDK 2.3.2 is only **~0.5 ms** per call
 
 See [BUGS.md](BUGS.md) for documented issues and solutions. Selected entries:
 
-| Bug          | Summary                                                                                                                                                                                                                               |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bug 43       | `virt_dev` suspended after probe, NPU PM domain not reachable                                                                                                                                                                         |
-| Bug 44       | `nputop` genpd domain not attached on mainline DT                                                                                                                                                                                     |
-| Bug 45/46    | NPU IOMMU clock gating causes AXI lockup in `init_runtime()`                                                                                                                                                                          |
-| Bug 47       | `RKNPU_MEM_CREATE` ioctl unimplemented — fixed with `dma_alloc_coherent`                                                                                                                                                              |
-| Bug 47 rev 2 | Wrong `obj_addr` returned from `RKNPU_MEM_CREATE` caused silent 3×60 s timeout                                                                                                                                                        |
-| Bug 49       | `RKNN_NPU_CORE_AUTO` with concurrent multi-context inference deadlocks rknpu.ko                                                                                                                                                       |
-| Bug 50       | BuildKit layer-diff zeroes gcc binaries when large download + compile land in same RUN layer                                                                                                                                          |
-| Bug 51       | Concurrent `rknn_init` from N threads crashes rknpu.ko kernel driver                                                                                                                                                                  |
-| Bug 52 ✅    | CORE_1 and CORE_2 inaccessible — rknpu.ko non-IOMMU mode, missing DT `iommus` property. Fixed: DTB patcher adds `iommus` property; driver patch holds all 3 IOMMU clocks active. All 3 cores verified working (179.6 fps CORE_0_1_2). |
+| Bug          | Summary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bug 43       | `virt_dev` suspended after probe, NPU PM domain not reachable                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Bug 44       | `nputop` genpd domain not attached on mainline DT                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Bug 45/46    | NPU IOMMU clock gating causes AXI lockup in `init_runtime()`                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Bug 47       | `RKNPU_MEM_CREATE` ioctl unimplemented — fixed with `dma_alloc_coherent`                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Bug 47 rev 2 | Wrong `obj_addr` returned from `RKNPU_MEM_CREATE` caused silent 3×60 s timeout                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Bug 49       | `RKNN_NPU_CORE_AUTO` with concurrent multi-context inference deadlocks rknpu.ko                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Bug 50       | BuildKit layer-diff zeroes gcc binaries when large download + compile land in same RUN layer                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Bug 51       | Concurrent `rknn_init` from N threads crashes rknpu.ko kernel driver                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Bug 52 ✅    | CORE_1 and CORE_2 inaccessible — rknpu.ko non-IOMMU mode, missing DT `iommus` property. Fixed: DTB patcher adds `iommus` property; driver patch holds all 3 IOMMU clocks active. All 3 cores verified working (179.6 fps CORE_0_1_2).                                                                                                                                                                                                                                                               |
+| Bug 55 ❌    | **Unresolved / blocking.** Job-done interrupt never fires. `init_runtime()` succeeds but every `rknn_run` fails with `failed to submit! ... int status: 0`; `dmesg` shows `BUG55 r55c poll[N]: ist=0x0` (interrupt status bits 30/31 of `INT_MASK=0xc0000000` never assert). Reproduced on RK1 / Talos v1.13.6 / kernel 6.18.38-talos. Driver loads and cores enumerate, but no inference can complete. Requires deep RK3588 hw/IRQ debugging upstream; low ROI — NPU path is currently not viable. |
 
 ---
 
