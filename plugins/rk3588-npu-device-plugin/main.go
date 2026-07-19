@@ -195,7 +195,7 @@ func (p *npuPlugin) Allocate(_ context.Context, req *v1beta1.AllocateRequest) (*
 		// /usr/lib/librknnrt.so (mount). No redundant DeviceSpec needed.
 		resp.ContainerResponses = append(resp.ContainerResponses,
 			&v1beta1.ContainerAllocateResponse{
-				CDIDevices: []*v1beta1.CDIDevice{{Name: cdiDeviceRef}},
+				CdiDevices: []*v1beta1.CDIDevice{{Name: cdiDeviceRef}},
 			},
 		)
 	}
