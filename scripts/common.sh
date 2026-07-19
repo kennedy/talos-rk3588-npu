@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # Talos Linux
-TALOS_VERSION="${TALOS_VERSION:-v1.13.4}"
+TALOS_VERSION="${TALOS_VERSION:-1.13.6}"
 
 # Linux kernel (must match the Talos release above)
 # Source: https://github.com/siderolabs/talos/blob/v1.13.4/pkg/machinery/gendata/data/pkgs
