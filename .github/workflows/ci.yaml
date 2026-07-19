@@ -14,7 +14,7 @@ jobs:
     name: Shellcheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Run shellcheck
         run: |
           shellcheck --severity=warning \
@@ -26,7 +26,7 @@ jobs:
     name: Verify derived versions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify PKGS_COMMIT matches TALOS_VERSION
         run: bash scripts/derive-versions.sh --verify
 
@@ -34,8 +34,8 @@ jobs:
     name: Go vet (device plugin)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: plugins/rk3588-npu-device-plugin/go.mod
           cache-dependency-path: plugins/rk3588-npu-device-plugin/go.sum
@@ -48,7 +48,7 @@ jobs:
     name: Validate YAML
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate workflow YAMLs
         run: |
           python3 - <<'EOF'
