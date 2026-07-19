@@ -21,7 +21,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 derive_pkgs_commit() {
-	local talos="$1" ref
+	# Normalize to exactly one leading 'v' — Renovate's extractVersion may write
+	# TALOS_VERSION without the prefix (e.g. 1.13.6), but the git tag is v1.13.6.
+	local talos="v${1#v}" ref
 	ref=$(curl -fsSL \
 		"https://raw.githubusercontent.com/siderolabs/talos/${talos}/pkg/machinery/gendata/data/pkgs") \
 		|| {
