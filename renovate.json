@@ -2,7 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Talos Linux RK3588 NPU — dependency update config.\n\nTALOS_VERSION is the single tracked input for the NPU build. PKGS_COMMIT is\nNOT tracked directly — it is derived from TALOS_VERSION and verified in CI\n(scripts/derive-versions.sh). KERNEL_VERSION is a label, asserted at build time.\n\nTalos-stack PRs do NOT automerge: bumping Talos couples the kernel + signed\nmodule, and CI does not compile the module, so a human must review and (after\nvalidating on a canary node) merge. auto-tag.yaml then tags → release.yaml builds.",
   "extends": [
-    "config:base",
+    "config:recommended",
     ":dependencyDashboard"
   ],
   "labels": [
@@ -27,7 +27,7 @@
     {
       "description": "Talos stack updates (TALOS_VERSION + RKNN runtime in common.sh) — manual review only. Bumping Talos couples the kernel/signed module and CI does not compile it, so never automerge.",
       "matchManagers": [
-        "regex"
+        "custom.regex"
       ],
       "matchFileNames": [
         "scripts/common.sh"
@@ -67,27 +67,21 @@
       "automerge": true
     }
   ],
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Talos version in common.sh (the single tracked NPU-build input). PKGS_COMMIT/KERNEL_VERSION are derived from this and verified in CI.",
-      "fileMatch": [
-        "^scripts/common\\.sh$"
-      ],
-      "matchStrings": [
-        "TALOS_VERSION=\"\\$\\{TALOS_VERSION:-(?<currentValue>[^}\"]+)\\}\""
-      ],
+      "managerFilePatterns": ["/^scripts/common\\.sh$/"],
+      "matchStrings": ["TALOS_VERSION=\"\\$\\{TALOS_VERSION:-(?<currentValue>[^}\"]+)\\}\""],
       "depNameTemplate": "siderolabs/talos",
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v?(?<version>.*)$"
     },
     {
+      "customType": "regex",
       "description": "RKNN runtime version in common.sh",
-      "fileMatch": [
-        "^scripts/common\\.sh$"
-      ],
-      "matchStrings": [
-        "RKNN_RUNTIME_VERSION=\"\\$\\{RKNN_RUNTIME_VERSION:-(?<currentValue>[^}\"]+)\\}\""
-      ],
+      "managerFilePatterns": ["/^scripts/common\\.sh$/"],
+      "matchStrings": ["RKNN_RUNTIME_VERSION=\"\\$\\{RKNN_RUNTIME_VERSION:-(?<currentValue>[^}\"]+)\\}\""],
       "depNameTemplate": "airockchip/rknn-toolkit2",
       "datasourceTemplate": "github-releases"
     }

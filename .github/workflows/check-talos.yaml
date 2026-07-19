@@ -3,7 +3,7 @@ name: Check for new Talos release
 on:
   schedule:
     # Run daily at 08:00 UTC
-    - cron: '0 8 * * *'
+    - cron: "0 8 * * *"
   workflow_dispatch:
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Get current Talos version
         id: current
