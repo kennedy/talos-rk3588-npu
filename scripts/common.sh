@@ -5,16 +5,16 @@
 set -euo pipefail
 
 # Talos Linux
-TALOS_VERSION="${TALOS_VERSION:-1.13.6}"
+TALOS_VERSION="${TALOS_VERSION:-v1.13.6}"
 
 # Linux kernel (must match the Talos release above)
-# Source: https://github.com/siderolabs/talos/blob/v1.13.4/pkg/machinery/gendata/data/pkgs
-KERNEL_VERSION="${KERNEL_VERSION:-6.18.34-talos}"
+# Source: https://github.com/siderolabs/talos/blob/v1.13.6/pkg/machinery/gendata/data/pkgs
+KERNEL_VERSION="${KERNEL_VERSION:-6.18.38-talos}"
 
 # siderolabs/pkgs commit pinned to the Talos release.
-# Talos v1.13.4 pins pkgs "v1.13.0-28-g54ec9fc" -> use the short SHA below.
-# Source: https://github.com/siderolabs/talos/blob/v1.13.4/pkg/machinery/gendata/data/pkgs
-PKGS_COMMIT="${PKGS_COMMIT:-54ec9fc}"
+# Talos v1.13.6 pins pkgs "v1.13.0-43-gd8c80cc" -> use the short SHA below.
+# Source: https://github.com/siderolabs/talos/blob/v1.13.6/pkg/machinery/gendata/data/pkgs
+PKGS_COMMIT="${PKGS_COMMIT:-d8c80cc}"
 
 # Rockchip NPU driver (vendor rknpu, not mainline rocket)
 # Source: https://github.com/w568w/rknpu-module (out-of-tree port to mainline kernel)
