@@ -20,7 +20,7 @@ permissions:
 jobs:
   build:
     name: Build custom installer
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
 
     steps:
       - uses: actions/checkout@v7

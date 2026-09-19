@@ -34,7 +34,7 @@ jobs:
   release:
     name: Create GitHub Release
     needs: [build-extensions, build-plugin, build-installer]
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
 
     steps:
       - uses: actions/checkout@v7
