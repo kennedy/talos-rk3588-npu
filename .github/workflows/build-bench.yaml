@@ -13,7 +13,7 @@ jobs:
     name: Build rknn-bench ARM64
     # Native ARM64 runner — avoids QEMU layer-diff bug that zero-truncates
     # large binaries (python3.11) in pip-install layers built under emulation.
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     permissions:
       contents: read
       packages: write
