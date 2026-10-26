@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # Talos Linux
-TALOS_VERSION="${TALOS_VERSION:-v1.13.6}"
+TALOS_VERSION="${TALOS_VERSION:-1.14.5}"
 
 # Linux kernel (must match the Talos release above)
 # Source: https://github.com/siderolabs/talos/blob/v1.13.6/pkg/machinery/gendata/data/pkgs
@@ -24,7 +24,7 @@ RKNPU_VERSION="${RKNPU_VERSION:-0.9.17.4}"
 # Rockchip RKNN runtime library (librknnrt.so)
 # Must match RKNPU_VERSION — same SDK release
 # Source: https://github.com/airockchip/rknn-toolkit2
-RKNN_RUNTIME_VERSION="${RKNN_RUNTIME_VERSION:-2.3.2}"
+RKNN_RUNTIME_VERSION="${RKNN_RUNTIME_VERSION:-2.5.0}"
 
 # OCI registry for intermediate build images (local or remote)
 REGISTRY="${REGISTRY:-registry.local:5000}"
